@@ -1,24 +1,56 @@
 import React, { useState } from "react";
-import { Mail, ArrowRight, CheckCircle } from "lucide-react";
+import {
+  Mail,
+  ArrowRight,
+  CheckCircle,
+  LoaderCircle,
+} from "lucide-react";
+
+const NEWSLETTER_API = "http://localhost:3000/api/newsletter/subscribe";
 
 export default function Newsletter() {
   const [email, setEmail] = useState("");
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!email.trim()) {
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail) {
+      setError("Please enter your email address.");
       return;
     }
 
-    setIsSubscribed(true);
-    setEmail("");
+    setSubmitting(true);
+    setError("");
+
+    try {
+      const response = await fetch(NEWSLETTER_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail }),
+      });
+
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(result.message || "Could not subscribe. Try again.");
+      }
+
+      setIsSubscribed(true);
+      setEmail("");
+    } catch (err) {
+      setError(err.message || "Something went wrong.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <section className="voltora-body bg-[#FAFAF8] py-16">
-      {/* Fonts, shared with the rest of the Voltora account/checkout flow */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
         .voltora-heading { font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif; }
@@ -49,34 +81,56 @@ export default function Newsletter() {
               You're successfully subscribed!
             </div>
           ) : (
-            <form
-              onSubmit={handleSubmit}
-              className="mx-auto mt-7 flex max-w-xl flex-col gap-3 sm:flex-row"
-            >
-              <div className="relative flex-1">
-                <Mail
-                  size={17}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9CA3AF]"
-                />
-
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email address"
-                  required
-                  className="h-12 w-full rounded-lg border border-white/15 bg-white pl-11 pr-4 text-sm text-[#14181F] outline-none placeholder:text-[#9CA3AF] focus:border-[#FFB020] focus:ring-2 focus:ring-[#FFB020]/25"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#FFB020] px-6 text-sm font-semibold text-[#0A0E14] transition hover:bg-[#e6a01c]"
+            <>
+              <form
+                onSubmit={handleSubmit}
+                className="mx-auto mt-7 flex max-w-xl flex-col gap-3 sm:flex-row"
               >
-                Subscribe
-                <ArrowRight size={16} />
-              </button>
-            </form>
+                <div className="relative flex-1">
+                  <Mail
+                    size={17}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9CA3AF]"
+                  />
+
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setError("");
+                    }}
+                    placeholder="Enter your email address"
+                    required
+                    className="h-12 w-full rounded-lg border border-white/15 bg-white pl-11 pr-4 text-sm text-[#14181F] outline-none placeholder:text-[#9CA3AF] focus:border-[#FFB020] focus:ring-2 focus:ring-[#FFB020]/25"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#FFB020] px-6 text-sm font-semibold text-[#0A0E14] transition hover:bg-[#e6a01c] disabled:opacity-60"
+                >
+                  {submitting ? (
+                    <>
+                      <LoaderCircle size={16} className="animate-spin" />
+                      Subscribing...
+                    </>
+                  ) : (
+                    <>
+                      Subscribe
+                      <ArrowRight size={16} />
+                    </>
+                  )}
+                </button>
+              </form>
+
+              {/* Error Message */}
+              {error && (
+                <p className="mx-auto mt-4 max-w-xl rounded-lg border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                  {error}
+                </p>
+              )}
+            </>
           )}
 
           {/* Small Text */}

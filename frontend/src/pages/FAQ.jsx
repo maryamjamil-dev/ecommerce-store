@@ -153,7 +153,6 @@ export default function FAQ() {
 
   return (
     <main className="voltora-body bg-[#FAFAF8]">
-      {/* Fonts, shared with the rest of the Voltora account/checkout flow */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
         .voltora-heading { font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif; }

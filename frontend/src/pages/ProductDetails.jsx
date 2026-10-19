@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -11,21 +11,100 @@ import {
   PackageCheck,
 } from "lucide-react";
 
-import products from "../data/products";
 import { useCart } from "../context/CartContext";
 import WishlistButton from "../components/WishlistButton";
 import Rating from "../components/Rating";
 
+const API_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+
 export default function ProductDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-
   const { addToCart } = useCart();
 
+  const [product, setProduct] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const product = products.find((item) => item.id === Number(id));
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function fetchProduct() {
+      try {
+        setLoading(true);
+        setError("");
+        setProduct(null);
+
+        const response = await fetch(
+          `${API_URL}/products/${encodeURIComponent(id)}`,
+          { signal: controller.signal }
+        );
+
+        if (response.status === 404) {
+          throw new Error("Product not found.");
+        }
+
+        if (!response.ok) {
+          throw new Error("Unable to load product. Please try again.");
+        }
+
+        const data = await response.json();
+
+        const item = data.product ?? data.data ?? data;
+
+        if (!item || typeof item !== "object" || !item._id && !item.id) {
+          throw new Error("Product data is invalid.");
+        }
+
+        const normalizedProduct = {
+          ...item,
+          id: item._id ?? item.id,
+          title: item.title ?? item.name ?? "Untitled Product",
+          brand: item.brand ?? "Unknown brand",
+          category: item.category ?? "Electronics",
+          price: Number(item.price ?? 0),
+          oldPrice:
+            item.oldPrice != null ? Number(item.oldPrice) : null,
+          rating: Number(item.rating ?? 0),
+          reviews: Number(item.reviews ?? item.numReviews ?? 0),
+          discount: item.discount ?? "",
+          image:
+            item.image ??
+            item.imageUrl ??
+            item.images?.[0] ??
+            "",
+          description: item.description ?? "No description available.",
+          stock: Number(item.stock ?? 0),
+        };
+
+        setProduct(normalizedProduct);
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          console.error("Product details error:", err);
+          setError(
+            err.message ||
+              "Something went wrong while loading the product."
+          );
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    if (id) {
+      fetchProduct();
+    } else {
+      setError("Product ID is missing.");
+      setLoading(false);
+    }
+
+    return () => controller.abort();
+  }, [id]);
 
   const fontStyles = (
     <style>{`
@@ -35,12 +114,24 @@ export default function ProductDetails() {
     `}</style>
   );
 
-  /* Product Not Found */
-  if (!product) {
+  if (loading) {
     return (
       <main className="voltora-body min-h-screen bg-[#FAFAF8]">
         {fontStyles}
+        <section className="mx-auto max-w-7xl px-4 py-24 text-center">
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-[#E5E7EB] border-t-[#B8791A]" />
+          <p className="mt-5 text-sm text-[#6B7280]">
+            Loading product details...
+          </p>
+        </section>
+      </main>
+    );
+  }
 
+  if (error || !product) {
+    return (
+      <main className="voltora-body min-h-screen bg-[#FAFAF8]">
+        {fontStyles}
         <section className="mx-auto max-w-3xl px-4 py-20 text-center sm:px-6">
           <div className="rounded-2xl border border-[#E5E7EB] bg-white px-6 py-14">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#FFF6E7] text-[#B8791A]">
@@ -48,12 +139,14 @@ export default function ProductDetails() {
             </div>
 
             <h1 className="voltora-heading mt-6 text-3xl font-semibold text-[#14181F]">
-              Product not found
+              {error.includes("not found")
+                ? "Product not found"
+                : "Unable to load product"}
             </h1>
 
             <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#6B7280]">
-              The product you're looking for doesn't exist or may have
-              been removed.
+              {error ||
+                "The product you're looking for doesn't exist or may have been removed."}
             </p>
 
             <Link
@@ -80,31 +173,35 @@ export default function ProductDetails() {
     image,
     description,
     category,
+    stock,
   } = product;
 
-  const stockAvailable = true;
+  const stockAvailable = stock > 0;
 
   const handleDecrease = () => {
-    setQuantity((current) => (current > 1 ? current - 1 : 1));
+    setQuantity((current) => Math.max(1, current - 1));
   };
 
   const handleIncrease = () => {
-    setQuantity((current) => current + 1);
+    setQuantity((current) =>
+      Math.min(stock, current + 1)
+    );
   };
 
   const handleAddToCart = () => {
+    if (!stockAvailable || quantity > stock) return;
+
     for (let i = 0; i < quantity; i++) {
       addToCart(product);
     }
 
     setIsAdded(true);
-
-    setTimeout(() => {
-      setIsAdded(false);
-    }, 1500);
+    setTimeout(() => setIsAdded(false), 1500);
   };
 
   const handleBuyNow = () => {
+    if (!stockAvailable || quantity > stock) return;
+
     for (let i = 0; i < quantity; i++) {
       addToCart(product);
     }
@@ -132,28 +229,34 @@ export default function ProductDetails() {
       {/* Product Details */}
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="grid gap-10 lg:grid-cols-2">
-          {/* PRODUCT IMAGE */}
+          {/* Product Image */}
           <div>
             <div className="relative overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white">
-              {/* Discount */}
               {discount && (
                 <span className="absolute left-5 top-5 z-10 rounded-md bg-red-500 px-3 py-1.5 text-sm font-semibold text-white">
                   {discount}
                 </span>
               )}
 
-              {/* Wishlist */}
               <div className="absolute right-5 top-5 z-10">
                 <WishlistButton product={product} />
               </div>
 
-              {/* Image */}
               <div className="flex min-h-[420px] items-center justify-center p-8 sm:min-h-[520px] sm:p-12">
-                <img
-                  src={image}
-                  alt={title}
-                  className="max-h-[480px] w-full object-contain"
-                />
+                {image ? (
+                  <img
+                    src={image}
+                    alt={title}
+                    className="max-h-[480px] w-full object-contain"
+                    onError={(event) => {
+                      event.currentTarget.style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <div className="text-center text-sm text-[#9CA3AF]">
+                    Product image unavailable
+                  </div>
+                )}
               </div>
             </div>
 
@@ -184,12 +287,10 @@ export default function ProductDetails() {
             </div>
           </div>
 
-          {/* PRODUCT INFORMATION */}
+          {/* Product Information */}
           <div className="flex flex-col">
-            {/* Brand */}
             <p className="text-sm font-medium text-[#9CA3AF]">{brand}</p>
 
-            {/* Title */}
             <h1 className="voltora-heading mt-3 text-3xl font-semibold leading-tight text-[#14181F] sm:text-4xl">
               {title}
             </h1>
@@ -199,13 +300,15 @@ export default function ProductDetails() {
               <div className="flex items-center gap-2">
                 <Rating rating={rating} />
                 <span className="text-sm font-semibold text-[#14181F]">
-                  {rating}
+                  {rating.toFixed(1)}
                 </span>
               </div>
 
               <span className="h-4 w-px bg-[#E5E7EB]" />
 
-              <span className="text-sm text-[#6B7280]">{reviews} reviews</span>
+              <span className="text-sm text-[#6B7280]">
+                {reviews} reviews
+              </span>
 
               <span className="h-4 w-px bg-[#E5E7EB]" />
 
@@ -218,7 +321,7 @@ export default function ProductDetails() {
                 ${price.toFixed(2)}
               </span>
 
-              {oldPrice && (
+              {oldPrice != null && oldPrice > price && (
                 <span className="pb-1 text-lg text-[#9CA3AF] line-through">
                   ${oldPrice.toFixed(2)}
                 </span>
@@ -233,10 +336,19 @@ export default function ProductDetails() {
 
             {/* Stock */}
             <div className="mt-6 flex items-center gap-2">
-              <span className="flex h-2.5 w-2.5 rounded-full bg-green-500" />
-              <span className="text-sm font-semibold text-green-600">
-                {stockAvailable ? "In stock" : "Out of stock"}
+              <span
+                className={`flex h-2.5 w-2.5 rounded-full ${
+                  stockAvailable ? "bg-green-500" : "bg-red-500"
+                }`}
+              />
+              <span
+                className={`text-sm font-semibold ${
+                  stockAvailable ? "text-green-600" : "text-red-600"
+                }`}
+              >
+                {stockAvailable ? `${stock} available` : "Out of stock"}
               </span>
+
               {stockAvailable && (
                 <span className="text-sm text-[#9CA3AF]">
                   • Ready to ship
@@ -255,10 +367,9 @@ export default function ProductDetails() {
               </p>
             </div>
 
-            {/* Quantity + Add Cart */}
+            {/* Quantity + Add to Cart */}
             <div className="mt-7 border-t border-[#E5E7EB] pt-7">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                {/* Quantity */}
                 <div>
                   <p className="mb-2 text-xs font-medium text-[#9CA3AF]">
                     Quantity
@@ -282,7 +393,8 @@ export default function ProductDetails() {
                     <button
                       type="button"
                       onClick={handleIncrease}
-                      className="flex h-full w-11 items-center justify-center text-[#14181F] transition hover:bg-[#F4F4F2]"
+                      disabled={!stockAvailable || quantity >= stock}
+                      className="flex h-full w-11 items-center justify-center text-[#14181F] transition hover:bg-[#F4F4F2] disabled:cursor-not-allowed disabled:opacity-40"
                       aria-label="Increase quantity"
                     >
                       <Plus size={16} />
@@ -290,7 +402,6 @@ export default function ProductDetails() {
                   </div>
                 </div>
 
-                {/* Add To Cart */}
                 <button
                   type="button"
                   onClick={handleAddToCart}
@@ -306,7 +417,6 @@ export default function ProductDetails() {
                 </button>
               </div>
 
-              {/* Buy Now */}
               <button
                 type="button"
                 onClick={handleBuyNow}
@@ -323,12 +433,10 @@ export default function ProductDetails() {
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#FFF6E7] text-[#B8791A]">
                   <Truck size={19} />
                 </div>
-
                 <div>
                   <h3 className="text-sm font-semibold text-[#14181F]">
                     Free shipping
                   </h3>
-
                   <p className="mt-1 text-xs leading-5 text-[#6B7280]">
                     Free shipping is available on orders over $50.
                   </p>
@@ -339,12 +447,10 @@ export default function ProductDetails() {
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#FFF6E7] text-[#B8791A]">
                   <ShieldCheck size={19} />
                 </div>
-
                 <div>
                   <h3 className="text-sm font-semibold text-[#14181F]">
                     Secure checkout
                   </h3>
-
                   <p className="mt-1 text-xs leading-5 text-[#6B7280]">
                     Your checkout information is protected.
                   </p>
@@ -355,15 +461,12 @@ export default function ProductDetails() {
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#FFF6E7] text-[#B8791A]">
                   <Check size={19} />
                 </div>
-
                 <div>
                   <h3 className="text-sm font-semibold text-[#14181F]">
                     Easy returns
                   </h3>
-
                   <p className="mt-1 text-xs leading-5 text-[#6B7280]">
-                    Return eligible products according to our return
-                    policy.
+                    Return eligible products according to our return policy.
                   </p>
                 </div>
               </div>
@@ -371,7 +474,7 @@ export default function ProductDetails() {
           </div>
         </div>
 
-        {/* PRODUCT INFORMATION TABLE */}
+        {/* Product Information Table */}
         <section className="mt-12 rounded-2xl border border-[#E5E7EB] bg-white p-6 sm:p-8">
           <h2 className="voltora-heading text-2xl font-semibold text-[#14181F]">
             Product information
@@ -396,8 +499,12 @@ export default function ProductDetails() {
               <p className="text-xs font-medium text-[#9CA3AF]">
                 Availability
               </p>
-              <p className="mt-2 text-sm font-semibold text-green-600">
-                In stock
+              <p
+                className={`mt-2 text-sm font-semibold ${
+                  stockAvailable ? "text-green-600" : "text-red-600"
+                }`}
+              >
+                {stockAvailable ? "In stock" : "Out of stock"}
               </p>
             </div>
 
@@ -406,7 +513,7 @@ export default function ProductDetails() {
                 Customer rating
               </p>
               <p className="mt-2 text-sm font-semibold text-[#14181F]">
-                {rating} / 5
+                {rating.toFixed(1)} / 5
               </p>
             </div>
           </div>

@@ -1,32 +1,124 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import Breadcrumb from "../components/Breadcrumb";
 import ProductGrid from "../components/ProductGrid";
-
-import categories from "../data/categories";
-import products from "../data/products";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+
+const fontStyles = `
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
+  .voltora-heading { font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif; }
+  .voltora-body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
+`;
+
 export default function CategoryProducts() {
-  const { category } = useParams();
+  const { category: slug } = useParams();
 
-  // Find the exact category using its slug
-  const selectedCategory = categories.find((item) => item.slug === category);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [categoryProducts, setCategoryProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [error, setError] = useState("");
 
-  // If category does not exist
-  if (!selectedCategory) {
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const fetchCategory = async () => {
+      try {
+        setLoading(true);
+        setNotFound(false);
+        setError("");
+
+        const res = await fetch(
+          `${API_URL}/categories/slug/${encodeURIComponent(slug)}`,
+          { credentials: "include", signal: controller.signal }
+        );
+
+        if (res.status === 404) {
+          setSelectedCategory(null);
+          setCategoryProducts([]);
+          setNotFound(true);
+          return;
+        }
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.message || "Failed to load category");
+        }
+
+        setSelectedCategory(data.category);
+        setCategoryProducts(data.products || []);
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          setError(err.message || "Failed to load category");
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchCategory();
+
+    return () => controller.abort();
+  }, [slug]);
+
+  // Loading
+  if (loading) {
     return (
       <>
-        <Header/>
+        <Header />
+        <main className="voltora-body bg-white">
+          <style>{fontStyles}</style>
+          <section className="mx-auto flex min-h-[500px] max-w-7xl items-center justify-center px-4 py-16">
+            <p className="text-sm text-[#6B7280]">Loading category...</p>
+          </section>
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
+  // Server / network error
+  if (error) {
+    return (
+      <>
+        <Header />
+        <main className="voltora-body bg-white">
+          <style>{fontStyles}</style>
+          <Breadcrumb
+            items={[
+              { label: "Categories", path: "/categories" },
+              { label: "Error" },
+            ]}
+          />
+          <section className="mx-auto flex min-h-[500px] max-w-7xl items-center justify-center px-4 py-16 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <h1 className="voltora-heading text-3xl font-semibold text-[#14181F]">
+                Something went wrong
+              </h1>
+              <p className="mt-3 text-sm text-red-600">{error}</p>
+            </div>
+          </section>
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
+  // If category does not exist
+  if (notFound || !selectedCategory) {
+    return (
+      <>
+        <Header />
 
         <main className="voltora-body bg-white">
-          <style>{`
-            @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
-            .voltora-heading { font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif; }
-            .voltora-body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
-          `}</style>
+          <style>{fontStyles}</style>
 
           <Breadcrumb
             items={[
@@ -53,20 +145,12 @@ export default function CategoryProducts() {
     );
   }
 
-  const categoryProducts = products.filter(
-    (product) => product.category === selectedCategory.name
-  );
-
   return (
     <>
-    
+      <Header />
 
       <main className="voltora-body bg-white">
-        <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
-          .voltora-heading { font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif; }
-          .voltora-body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
-        `}</style>
+        <style>{fontStyles}</style>
 
         {/* Breadcrumb */}
         <Breadcrumb
@@ -125,7 +209,7 @@ export default function CategoryProducts() {
         </section>
       </main>
 
-      <Footer/>
+      <Footer />
     </>
   );
 }

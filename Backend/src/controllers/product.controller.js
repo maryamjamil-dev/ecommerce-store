@@ -1,4 +1,4 @@
-const product = require("../model/product.model")
+const Product = require("../model/product.model")
 async function createProduct(req, res) {
   try {
     const product = await Product.create(req.body);
@@ -118,6 +118,66 @@ async function deleteProduct(req, res) {
     });
   }
 }
+async function seedProducts(req, res) {
+  try {
+    if (process.env.NODE_ENV === "production") {
+      return res.status(403).json({
+        success: false,
+        message: "Seeding is disabled in production",
+      });
+    }
+
+    const products = req.body.products;
+
+    if (!Array.isArray(products) || products.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Products array is required",
+      });
+    }
+
+    const operations = products.map((product) => ({
+      updateOne: {
+        filter: {
+          title: product.title,
+          brand: product.brand,
+        },
+        update: {
+          $set: {
+            title: product.title,
+            category: product.category,
+            brand: product.brand,
+            price: product.price,
+            oldPrice: product.oldPrice ?? undefined,
+            rating: product.rating ?? 0,
+            reviews: product.reviews ?? 0,
+            discount: product.discount ?? "",
+            image: product.image,
+            description: product.description,
+            stock: product.stock ?? 10,
+          },
+        },
+        upsert: true,
+      },
+    }));
+
+    const result = await Product.bulkWrite(operations);
+
+    return res.status(200).json({
+      success: true,
+      message: "Products seeded successfully",
+      received: products.length,
+      inserted: result.upsertedCount,
+      updated: result.modifiedCount,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: "Failed to seed products",
+      error: error.message,
+    });
+  }
+}
 
 module.exports = {
   createProduct,
@@ -125,5 +185,6 @@ module.exports = {
   getProductById,
   updateProduct,
   deleteProduct,
+  seedProducts,
 };
 

@@ -17,6 +17,7 @@ import Orders from "../pages/Orders";
 import OrderDetails from "../pages/OrderDetails";
 import Addresses from "../pages/Addresses";
 import ForgotPassword from "../pages/ForgetPassword";
+import ResetPassword from "../pages/Resetpassword ";
 import FAQ from "../pages/FAQ";
 import ShippingPolicy from "../pages/ShippingPolicy";
 import ReturnPolicy from "../pages/ReturnPolicy";
@@ -54,6 +55,7 @@ export default function AppRoutes() {
     <Route path="/register" element={<Register />}/>
     <Route path="/verify-otp" element={<VerifyOTP />}/>
     <Route path="/forgotpassword" element={<ForgotPassword />}/>
+    <Route path="/reset-password/:token" element={<ResetPassword />} />
     <Route path="/account" element={<Account />}/>
     <Route path="/orders" element={<Orders />}/>
     <Route path="/order-details/:id" element={<OrderDetails />}/>

@@ -2,19 +2,45 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Mail, CheckCircle } from "lucide-react";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
 
     if (!email.trim()) {
-      alert("Please enter your email address.");
+      setError("Please enter your email address.");
       return;
     }
 
-    setSubmitted(true);
+    try {
+      setLoading(true);
+
+      const res = await fetch(`${API_URL}/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email: email.trim() }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Something went wrong");
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -34,10 +60,7 @@ export default function ForgotPassword() {
             <>
               {/* Icon */}
               <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-[#FFF6E7]">
-                <Mail
-                  size={26}
-                  className="text-[#FFB020]"
-                />
+                <Mail size={26} className="text-[#FFB020]" />
               </div>
 
               {/* Heading */}
@@ -46,14 +69,14 @@ export default function ForgotPassword() {
               </h1>
 
               <p className="mt-2 text-sm leading-6 text-[#6B7280]">
-                Enter the email address associated with your
-                account and we'll send you instructions to
-                reset your password.
+                Enter the email address associated with your account and we'll
+                send you instructions to reset your password.
               </p>
 
               {/* Form */}
               <form
                 onSubmit={handleSubmit}
+                noValidate
                 className="mt-7 space-y-5"
               >
                 <div>
@@ -74,20 +97,23 @@ export default function ForgotPassword() {
                       id="email"
                       type="email"
                       value={email}
-                      onChange={(e) =>
-                        setEmail(e.target.value)
-                      }
+                      onChange={(e) => setEmail(e.target.value)}
                       placeholder="you@example.com"
                       className="w-full rounded-xl border border-[#D1D5DB] bg-white py-3 pl-11 pr-4 text-[#14181F] outline-none transition placeholder:text-[#9CA3AF] focus:border-[#FFB020] focus:ring-2 focus:ring-[#FFB020]/20"
                     />
                   </div>
+
+                  {error && (
+                    <p className="mt-2 text-sm text-red-600">{error}</p>
+                  )}
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full rounded-xl bg-[#FFB020] px-5 py-3 font-semibold text-[#0A0E14] transition hover:bg-[#e6a01c]"
+                  disabled={loading}
+                  className="w-full rounded-xl bg-[#FFB020] px-5 py-3 font-semibold text-[#0A0E14] transition hover:bg-[#e6a01c] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Send Reset Instructions
+                  {loading ? "Sending..." : "Send Reset Instructions"}
                 </button>
               </form>
 
@@ -106,10 +132,7 @@ export default function ForgotPassword() {
             /* Success State */
             <div className="py-6 text-center">
               <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#FFF6E7]">
-                <CheckCircle
-                  size={32}
-                  className="text-[#FFB020]"
-                />
+                <CheckCircle size={32} className="text-[#FFB020]" />
               </div>
 
               <h1 className="text-2xl font-bold text-[#14181F]">
@@ -118,11 +141,8 @@ export default function ForgotPassword() {
 
               <p className="mt-3 text-sm leading-6 text-[#6B7280]">
                 If an account exists for{" "}
-                <span className="font-semibold text-[#14181F]">
-                  {email}
-                </span>
-                , you will receive password reset
-                instructions.
+                <span className="font-semibold text-[#14181F]">{email}</span>,
+                you will receive password reset instructions.
               </p>
 
               <Link
@@ -137,6 +157,7 @@ export default function ForgotPassword() {
                 onClick={() => {
                   setSubmitted(false);
                   setEmail("");
+                  setError("");
                 }}
                 className="mt-4 text-sm font-semibold text-[#B8791A] hover:text-[#0A0E14]"
               >

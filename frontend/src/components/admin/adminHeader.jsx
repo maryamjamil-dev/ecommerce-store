@@ -50,7 +50,6 @@ export default function AdminHeader({ onMenuClick }) {
   const handleLogout = () => {
     setIsProfileOpen(false);
 
-    // Later we will connect this with AuthContext/backend
     console.log("Admin logout");
 
     navigate("/login");

@@ -54,26 +54,21 @@ export default function Register() {
     setSuccessMessage("");
   };
 
-  const getPasswordChecks = (password) => {
-    return {
-      length: password.length >= 8,
-      uppercase: /[A-Z]/.test(password),
-      lowercase: /[a-z]/.test(password),
-      number: /[0-9]/.test(password),
-      special: /[^A-Za-z0-9]/.test(password),
-    };
-  };
+  const getPasswordChecks = (password) => ({
+    length: password.length >= 8,
+    uppercase: /[A-Z]/.test(password),
+    lowercase: /[a-z]/.test(password),
+    number: /[0-9]/.test(password),
+    special: /[^A-Za-z0-9]/.test(password),
+  });
 
-  const passwordChecks = getPasswordChecks(
-    formData.password
-  );
+  const passwordChecks = getPasswordChecks(formData.password);
 
   const passwordStrengthCount =
     Object.values(passwordChecks).filter(Boolean).length;
 
   const validateForm = () => {
     const newErrors = {};
-
     const name = formData.name.trim();
     const email = formData.email.trim().toLowerCase();
     const password = formData.password;
@@ -81,25 +76,22 @@ export default function Register() {
 
     if (!name) {
       newErrors.name = "Full name is required.";
-    } else if (name.length < 2) {
-      newErrors.name = "Please enter your full name.";
+    } else if (name.length < 3) {
+      newErrors.name = "Name must contain at least 3 characters.";
+    } else if (name.length > 30) {
+      newErrors.name = "Name cannot exceed 30 characters.";
     }
 
     if (!email) {
       newErrors.email = "Email address is required.";
-    } else {
-      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-      if (!emailPattern.test(email)) {
-        newErrors.email = "Please enter a valid email address.";
-      }
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.email = "Please enter a valid email address.";
     }
 
     if (!password) {
       newErrors.password = "Password is required.";
     } else if (password.length < 8) {
-      newErrors.password =
-        "Password must be at least 8 characters.";
+      newErrors.password = "Password must be at least 8 characters.";
     } else if (!passwordChecks.uppercase) {
       newErrors.password =
         "Password must contain at least one uppercase letter.";
@@ -115,11 +107,9 @@ export default function Register() {
     }
 
     if (!confirmPassword) {
-      newErrors.confirmPassword =
-        "Please confirm your password.";
+      newErrors.confirmPassword = "Please confirm your password.";
     } else if (password !== confirmPassword) {
-      newErrors.confirmPassword =
-        "Passwords do not match.";
+      newErrors.confirmPassword = "Passwords do not match.";
     }
 
     if (!formData.agreeToTerms) {
@@ -128,7 +118,6 @@ export default function Register() {
     }
 
     setErrors(newErrors);
-
     return Object.keys(newErrors).length === 0;
   };
 
@@ -138,11 +127,7 @@ export default function Register() {
     setRegisterError("");
     setSuccessMessage("");
 
-    const isValid = validateForm();
-
-    if (!isValid) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setIsLoading(true);
 
@@ -150,27 +135,25 @@ export default function Register() {
       const name = formData.name.trim();
       const email = formData.email.trim().toLowerCase();
 
-      
-      await new Promise((resolve) =>
-        setTimeout(resolve, 800)
-      );
-
-      const result = register(
+      const result = await register({
         name,
         email,
-        formData.password
-      );
+        password: formData.password,
+      });
 
-      if (!result.success) {
+      if (!result?.success) {
         setRegisterError(
-          result.message ||
-            "Unable to create your account."
+          result?.message || "Unable to create your account."
         );
-
         return;
       }
 
+      setSuccessMessage(
+        "Account created! Redirecting to email verification..."
+      );
+
       navigate("/verify-otp", {
+        replace: true,
         state: {
           name,
           email,
@@ -181,47 +164,25 @@ export default function Register() {
       console.error("Registration error:", error);
 
       setRegisterError(
-        "Unable to create your account. Please try again."
+        error.response?.data?.message ||
+          error.message ||
+          "Unable to create your account. Please try again."
       );
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleGoogleSignup = async () => {
-    setIsLoading(true);
-    setRegisterError("");
-    setSuccessMessage("");
-
-    try {
-      await new Promise((resolve) =>
-        setTimeout(resolve, 700)
-      );
-
-      setRegisterError(
-        "Google sign-up will be available after authentication is connected."
-      );
-    } finally {
-      setIsLoading(false);
-    }
+  const handleGoogleSignup = () => {
+    setRegisterError(
+      "Google sign-up is not configured yet."
+    );
   };
 
-  const handleAppleSignup = async () => {
-    setIsLoading(true);
-    setRegisterError("");
-    setSuccessMessage("");
-
-    try {
-      await new Promise((resolve) =>
-        setTimeout(resolve, 700)
-      );
-
-      setRegisterError(
-        "Apple sign-up will be available after authentication is connected."
-      );
-    } finally {
-      setIsLoading(false);
-    }
+  const handleAppleSignup = () => {
+    setRegisterError(
+      "Apple sign-up is not configured yet."
+    );
   };
 
   return (
@@ -238,47 +199,25 @@ export default function Register() {
         }
 
         @keyframes voltora-pulse {
-          0% {
-            offset-distance: 0%;
-            opacity: 0;
-          }
-
-          8% {
-            opacity: 1;
-          }
-
-          92% {
-            opacity: 1;
-          }
-
-          100% {
-            offset-distance: 100%;
-            opacity: 0;
-          }
+          0% { offset-distance: 0%; opacity: 0; }
+          8% { opacity: 1; }
+          92% { opacity: 1; }
+          100% { offset-distance: 100%; opacity: 0; }
         }
 
         @keyframes voltora-glow {
-          0%,
-          78% {
+          0%, 78% {
             opacity: 0.25;
-            filter: drop-shadow(
-              0 0 0 rgba(255, 176, 32, 0)
-            );
+            filter: drop-shadow(0 0 0 rgba(255,176,32,0));
           }
-
-          88%,
-          100% {
+          88%, 100% {
             opacity: 1;
-            filter: drop-shadow(
-              0 0 10px rgba(255, 176, 32, 0.85)
-            );
+            filter: drop-shadow(0 0 10px rgba(255,176,32,0.85));
           }
         }
 
         .voltora-trace-dot {
-          offset-path: path(
-            "M4,70 L90,70 L120,30 L170,30 L200,70 L396,70"
-          );
+          offset-path: path("M4,70 L90,70 L120,30 L170,30 L200,70 L396,70");
           offset-rotate: 0deg;
           animation: voltora-pulse 3.2s ease-in-out infinite;
         }
@@ -289,8 +228,7 @@ export default function Register() {
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .voltora-trace-dot,
-          .voltora-bulb {
+          .voltora-trace-dot, .voltora-bulb {
             animation: none;
             opacity: 1;
           }
@@ -298,7 +236,7 @@ export default function Register() {
       `}</style>
 
       <section className="mx-auto grid min-h-screen max-w-7xl lg:grid-cols-2">
-        {/* LEFT SIDE */}
+        {/* LEFT PANEL */}
         <div className="relative hidden overflow-hidden bg-[#0A0E14] p-10 text-white lg:flex lg:flex-col lg:justify-between xl:p-16">
           <div
             className="pointer-events-none absolute inset-0 opacity-[0.07]"
@@ -309,14 +247,10 @@ export default function Register() {
             }}
           />
 
-          <Link
-            to="/"
-            className="relative inline-flex items-center gap-2.5"
-          >
+          <Link to="/" className="relative inline-flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#FFB020] text-[#0A0E14]">
               <Zap size={18} fill="currentColor" />
             </div>
-
             <span className="voltora-heading text-xl font-semibold tracking-tight">
               Voltora
             </span>
@@ -328,9 +262,9 @@ export default function Register() {
             </h1>
 
             <p className="voltora-body mt-5 text-[15px] leading-7 text-white/60">
-              Create your account to save your favorite
-              tech, track orders, manage your wishlist,
-              and enjoy a smoother shopping experience.
+              Create your account to save your favorite tech,
+              track orders, manage your wishlist, and enjoy a
+              smoother shopping experience.
             </p>
 
             <div className="relative mt-12 h-28 w-full max-w-sm">
@@ -338,20 +272,14 @@ export default function Register() {
                 viewBox="0 0 400 100"
                 className="h-full w-full"
                 fill="none"
+                aria-hidden="true"
               >
                 <path
                   d="M4,70 L90,70 L120,30 L170,30 L200,70 L396,70"
                   stroke="rgba(255,255,255,0.14)"
                   strokeWidth="2"
                 />
-
-                <circle
-                  cx="4"
-                  cy="70"
-                  r="4"
-                  fill="rgba(255,255,255,0.3)"
-                />
-
+                <circle cx="4" cy="70" r="4" fill="rgba(255,255,255,0.3)" />
                 <circle
                   cx="396"
                   cy="70"
@@ -367,21 +295,16 @@ export default function Register() {
 
           <div className="voltora-body relative flex flex-wrap items-center gap-4 text-xs text-white/40 xl:gap-6">
             <span>Free shipping over $50</span>
-
             <span className="hidden h-3 w-px bg-white/15 xl:block" />
-
             <span>2-year warranty on all gear</span>
-
             <span className="hidden h-3 w-px bg-white/15 xl:block" />
-
             <span>30-day returns</span>
           </div>
         </div>
 
-        {/* RIGHT SIDE */}
+        {/* RIGHT PANEL */}
         <div className="flex items-center justify-center px-5 py-10 sm:px-8 lg:px-12">
           <div className="w-full max-w-md">
-            {/* MOBILE LOGO */}
             <Link
               to="/"
               className="mb-8 flex items-center justify-center gap-2.5 lg:hidden"
@@ -389,55 +312,40 @@ export default function Register() {
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#0A0E14] text-white">
                 <Zap size={18} fill="currentColor" />
               </div>
-
               <span className="voltora-heading text-xl font-semibold text-[#0A0E14]">
                 Voltora
               </span>
             </Link>
 
-            {/* HEADING */}
             <div className="text-center lg:text-left">
               <h2 className="voltora-heading text-[28px] font-semibold text-[#14181F]">
                 Create your account
               </h2>
-
               <p className="voltora-body mt-2 text-sm leading-6 text-[#6B7280]">
-                Join Voltora and make your next tech
-                purchase easier.
+                Join Voltora and make your next tech purchase easier.
               </p>
             </div>
 
-            {/* ERROR */}
             {registerError && (
               <div
                 role="alert"
                 className="mt-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
               >
-                <AlertCircle
-                  size={18}
-                  className="mt-0.5 shrink-0"
-                />
-
+                <AlertCircle size={18} className="mt-0.5 shrink-0" />
                 <span>{registerError}</span>
               </div>
             )}
 
-            {/* SUCCESS */}
             {successMessage && (
               <div
                 role="status"
                 className="mt-5 flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700"
               >
-                <CheckCircle2
-                  size={18}
-                  className="mt-0.5 shrink-0"
-                />
-
+                <CheckCircle2 size={18} className="mt-0.5 shrink-0" />
                 <span>{successMessage}</span>
               </div>
             )}
 
-            {/* REGISTER FORM */}
             <form
               onSubmit={handleSubmit}
               noValidate
@@ -445,19 +353,11 @@ export default function Register() {
             >
               {/* NAME */}
               <div>
-                <label
-                  htmlFor="name"
-                  className="mb-1.5 block text-sm font-medium text-[#14181F]"
-                >
+                <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-[#14181F]">
                   Full name
                 </label>
-
                 <div className="relative">
-                  <User
-                    size={17}
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9CA3AF]"
-                  />
-
+                  <User size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
                   <input
                     id="name"
                     type="text"
@@ -467,11 +367,6 @@ export default function Register() {
                     autoComplete="name"
                     placeholder="Enter your full name"
                     aria-invalid={Boolean(errors.name)}
-                    aria-describedby={
-                      errors.name
-                        ? "name-error"
-                        : undefined
-                    }
                     className={`w-full rounded-lg border bg-white py-3 pl-10 pr-4 text-sm text-[#14181F] outline-none transition placeholder:text-[#9CA3AF] focus:ring-2 ${
                       errors.name
                         ? "border-red-400 focus:border-red-400 focus:ring-red-400/20"
@@ -479,32 +374,16 @@ export default function Register() {
                     }`}
                   />
                 </div>
-
-                {errors.name && (
-                  <p
-                    id="name-error"
-                    className="mt-1.5 text-xs text-red-600"
-                  >
-                    {errors.name}
-                  </p>
-                )}
+                {errors.name && <p className="mt-1.5 text-xs text-red-600">{errors.name}</p>}
               </div>
 
               {/* EMAIL */}
               <div>
-                <label
-                  htmlFor="email"
-                  className="mb-1.5 block text-sm font-medium text-[#14181F]"
-                >
+                <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-[#14181F]">
                   Email address
                 </label>
-
                 <div className="relative">
-                  <Mail
-                    size={17}
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9CA3AF]"
-                  />
-
+                  <Mail size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
                   <input
                     id="email"
                     type="email"
@@ -514,11 +393,6 @@ export default function Register() {
                     autoComplete="email"
                     placeholder="you@example.com"
                     aria-invalid={Boolean(errors.email)}
-                    aria-describedby={
-                      errors.email
-                        ? "email-error"
-                        : undefined
-                    }
                     className={`w-full rounded-lg border bg-white py-3 pl-10 pr-4 text-sm text-[#14181F] outline-none transition placeholder:text-[#9CA3AF] focus:ring-2 ${
                       errors.email
                         ? "border-red-400 focus:border-red-400 focus:ring-red-400/20"
@@ -526,237 +400,118 @@ export default function Register() {
                     }`}
                   />
                 </div>
-
-                {errors.email && (
-                  <p
-                    id="email-error"
-                    className="mt-1.5 text-xs text-red-600"
-                  >
-                    {errors.email}
-                  </p>
-                )}
+                {errors.email && <p className="mt-1.5 text-xs text-red-600">{errors.email}</p>}
               </div>
 
               {/* PASSWORD */}
               <div>
-                <label
-                  htmlFor="password"
-                  className="mb-1.5 block text-sm font-medium text-[#14181F]"
-                >
+                <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-[#14181F]">
                   Password
                 </label>
-
                 <div className="relative">
-                  <Lock
-                    size={17}
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9CA3AF]"
-                  />
-
+                  <Lock size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
                   <input
                     id="password"
-                    type={
-                      showPassword ? "text" : "password"
-                    }
+                    type={showPassword ? "text" : "password"}
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
                     autoComplete="new-password"
                     placeholder="Create a strong password"
                     aria-invalid={Boolean(errors.password)}
-                    aria-describedby={
-                      errors.password
-                        ? "password-error"
-                        : "password-help"
-                    }
                     className={`w-full rounded-lg border bg-white py-3 pl-10 pr-11 text-sm text-[#14181F] outline-none transition placeholder:text-[#9CA3AF] focus:ring-2 ${
                       errors.password
                         ? "border-red-400 focus:border-red-400 focus:ring-red-400/20"
                         : "border-[#E5E7EB] focus:border-[#FFB020] focus:ring-[#FFB020]/25"
                     }`}
                   />
-
                   <button
                     type="button"
-                    onClick={() =>
-                      setShowPassword(
-                        (current) => !current
-                      )
-                    }
+                    onClick={() => setShowPassword((current) => !current)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                     className="absolute right-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-[#9CA3AF] transition hover:bg-[#F4F4F2] hover:text-[#14181F]"
-                    aria-label={
-                      showPassword
-                        ? "Hide password"
-                        : "Show password"
-                    }
                   >
-                    {showPassword ? (
-                      <EyeOff size={17} />
-                    ) : (
-                      <Eye size={17} />
-                    )}
+                    {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                   </button>
                 </div>
 
-                {/* PASSWORD STRENGTH */}
                 {formData.password && (
-                  <div
-                    id="password-help"
-                    className="mt-3"
-                  >
+                  <div className="mt-3">
                     <div className="mb-2 flex items-center justify-between">
-                      <span className="text-xs font-medium text-[#6B7280]">
-                        Password strength
-                      </span>
-
-                      <span
-                        className={`text-xs font-semibold ${
-                          passwordStrengthCount <= 2
-                            ? "text-red-600"
-                            : passwordStrengthCount <= 4
-                            ? "text-[#B8791A]"
-                            : "text-green-600"
-                        }`}
-                      >
-                        {passwordStrengthCount <= 2
-                          ? "Weak"
+                      <span className="text-xs font-medium text-[#6B7280]">Password strength</span>
+                      <span className={`text-xs font-semibold ${
+                        passwordStrengthCount <= 2
+                          ? "text-red-600"
                           : passwordStrengthCount <= 4
-                          ? "Good"
-                          : "Strong"}
+                          ? "text-[#B8791A]"
+                          : "text-green-600"
+                      }`}>
+                        {passwordStrengthCount <= 2 ? "Weak" : passwordStrengthCount <= 4 ? "Good" : "Strong"}
                       </span>
                     </div>
 
                     <div className="flex gap-1">
-                      {[1, 2, 3, 4, 5].map(
-                        (item) => (
-                          <div
-                            key={item}
-                            className={`h-1 flex-1 rounded-full ${
-                              item <= passwordStrengthCount
-                                ? passwordStrengthCount <=
-                                  2
-                                  ? "bg-red-400"
-                                  : passwordStrengthCount <=
-                                    4
-                                  ? "bg-[#FFB020]"
-                                  : "bg-green-500"
-                                : "bg-[#E5E7EB]"
-                            }`}
-                          />
-                        )
-                      )}
+                      {[1, 2, 3, 4, 5].map((item) => (
+                        <div
+                          key={item}
+                          className={`h-1 flex-1 rounded-full ${
+                            item <= passwordStrengthCount
+                              ? passwordStrengthCount <= 2
+                                ? "bg-red-400"
+                                : passwordStrengthCount <= 4
+                                ? "bg-[#FFB020]"
+                                : "bg-green-500"
+                              : "bg-[#E5E7EB]"
+                          }`}
+                        />
+                      ))}
                     </div>
 
                     <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
-                      <PasswordRequirement
-                        valid={passwordChecks.length}
-                        text="8+ characters"
-                      />
-
-                      <PasswordRequirement
-                        valid={passwordChecks.uppercase}
-                        text="Uppercase letter"
-                      />
-
-                      <PasswordRequirement
-                        valid={passwordChecks.lowercase}
-                        text="Lowercase letter"
-                      />
-
-                      <PasswordRequirement
-                        valid={passwordChecks.number}
-                        text="Number"
-                      />
-
-                      <PasswordRequirement
-                        valid={passwordChecks.special}
-                        text="Special character"
-                      />
+                      <PasswordRequirement valid={passwordChecks.length} text="8+ characters" />
+                      <PasswordRequirement valid={passwordChecks.uppercase} text="Uppercase letter" />
+                      <PasswordRequirement valid={passwordChecks.lowercase} text="Lowercase letter" />
+                      <PasswordRequirement valid={passwordChecks.number} text="Number" />
+                      <PasswordRequirement valid={passwordChecks.special} text="Special character" />
                     </div>
                   </div>
                 )}
 
-                {errors.password && (
-                  <p
-                    id="password-error"
-                    className="mt-1.5 text-xs text-red-600"
-                  >
-                    {errors.password}
-                  </p>
-                )}
+                {errors.password && <p className="mt-1.5 text-xs text-red-600">{errors.password}</p>}
               </div>
 
               {/* CONFIRM PASSWORD */}
               <div>
-                <label
-                  htmlFor="confirmPassword"
-                  className="mb-1.5 block text-sm font-medium text-[#14181F]"
-                >
+                <label htmlFor="confirmPassword" className="mb-1.5 block text-sm font-medium text-[#14181F]">
                   Confirm password
                 </label>
-
                 <div className="relative">
-                  <Lock
-                    size={17}
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9CA3AF]"
-                  />
-
+                  <Lock size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
                   <input
                     id="confirmPassword"
-                    type={
-                      showConfirmPassword
-                        ? "text"
-                        : "password"
-                    }
+                    type={showConfirmPassword ? "text" : "password"}
                     name="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     autoComplete="new-password"
                     placeholder="Re-enter your password"
-                    aria-invalid={Boolean(
-                      errors.confirmPassword
-                    )}
-                    aria-describedby={
-                      errors.confirmPassword
-                        ? "confirm-password-error"
-                        : undefined
-                    }
+                    aria-invalid={Boolean(errors.confirmPassword)}
                     className={`w-full rounded-lg border bg-white py-3 pl-10 pr-11 text-sm text-[#14181F] outline-none transition placeholder:text-[#9CA3AF] focus:ring-2 ${
                       errors.confirmPassword
                         ? "border-red-400 focus:border-red-400 focus:ring-red-400/20"
                         : "border-[#E5E7EB] focus:border-[#FFB020] focus:ring-[#FFB020]/25"
                     }`}
                   />
-
                   <button
                     type="button"
-                    onClick={() =>
-                      setShowConfirmPassword(
-                        (current) => !current
-                      )
-                    }
+                    onClick={() => setShowConfirmPassword((current) => !current)}
+                    aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
                     className="absolute right-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-[#9CA3AF] transition hover:bg-[#F4F4F2] hover:text-[#14181F]"
-                    aria-label={
-                      showConfirmPassword
-                        ? "Hide confirm password"
-                        : "Show confirm password"
-                    }
                   >
-                    {showConfirmPassword ? (
-                      <EyeOff size={17} />
-                    ) : (
-                      <Eye size={17} />
-                    )}
+                    {showConfirmPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                   </button>
                 </div>
-
-                {errors.confirmPassword && (
-                  <p
-                    id="confirm-password-error"
-                    className="mt-1.5 text-xs text-red-600"
-                  >
-                    {errors.confirmPassword}
-                  </p>
-                )}
+                {errors.confirmPassword && <p className="mt-1.5 text-xs text-red-600">{errors.confirmPassword}</p>}
               </div>
 
               {/* TERMS */}
@@ -769,34 +524,18 @@ export default function Register() {
                     onChange={handleChange}
                     className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#D1D5DB] text-[#FFB020] focus:ring-[#FFB020]/40"
                   />
-
                   <span className="text-xs leading-5 text-[#6B7280]">
                     I agree to the{" "}
-
-                    <Link
-                      to="/terms"
-                      className="font-semibold text-[#14181F] hover:text-[#B8791A]"
-                    >
+                    <Link to="/terms" className="font-semibold text-[#14181F] hover:text-[#B8791A]">
                       Terms of Service
-                    </Link>
-
-                    {" "}and{" "}
-
-                    <Link
-                      to="/privacy-policy"
-                      className="font-semibold text-[#14181F] hover:text-[#B8791A]"
-                    >
+                    </Link>{" "}
+                    and{" "}
+                    <Link to="/privacy-policy" className="font-semibold text-[#14181F] hover:text-[#B8791A]">
                       Privacy Policy
-                    </Link>
-                    .
+                    </Link>.
                   </span>
                 </label>
-
-                {errors.agreeToTerms && (
-                  <p className="mt-1.5 text-xs text-red-600">
-                    {errors.agreeToTerms}
-                  </p>
-                )}
+                {errors.agreeToTerms && <p className="mt-1.5 text-xs text-red-600">{errors.agreeToTerms}</p>}
               </div>
 
               {/* SUBMIT */}
@@ -807,10 +546,7 @@ export default function Register() {
               >
                 {isLoading ? (
                   <>
-                    <Loader2
-                      size={17}
-                      className="animate-spin"
-                    />
+                    <Loader2 size={17} className="animate-spin" />
                     Creating account...
                   </>
                 ) : (
@@ -827,100 +563,51 @@ export default function Register() {
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-[#E5E7EB]" />
               </div>
-
               <div className="relative flex justify-center text-sm">
-                <span className="bg-[#FAFAF8] px-4 text-[#9CA3AF]">
-                  Or sign up with
-                </span>
+                <span className="bg-[#FAFAF8] px-4 text-[#9CA3AF]">Or sign up with</span>
               </div>
             </div>
 
             {/* SOCIAL SIGNUP */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {/* GOOGLE */}
               <button
                 type="button"
                 onClick={handleGoogleSignup}
                 disabled={isLoading}
                 className="flex min-w-0 w-full items-center justify-center gap-2.5 whitespace-nowrap rounded-full border border-[#D1D5DB] bg-white px-4 py-3 text-sm font-medium text-[#14181F] transition hover:bg-[#F4F4F2] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  className="shrink-0"
-                  aria-hidden="true"
-                >
-                  <path
-                    fill="#4285F4"
-                    d="M21.35 12.27c0-.71-.06-1.39-.18-2.05H12v3.88h5.23a4.47 4.47 0 0 1-1.94 2.94v2.44h3.14c1.84-1.69 2.92-4.18 2.92-7.21z"
-                  />
-
-                  <path
-                    fill="#34A853"
-                    d="M12 21.5c2.63 0 4.84-.87 6.45-2.36l-3.14-2.44c-.87.58-1.98.93-3.31.93-2.55 0-4.71-1.72-5.49-4.03H3.27v2.52A9.74 9.74 0 0 0 12 21.5z"
-                  />
-
-                  <path
-                    fill="#FBBC05"
-                    d="M6.51 13.6A5.85 5.85 0 0 1 6.2 12c0-.56.1-1.1.31-1.6V7.88H3.27A9.75 9.75 0 0 0 2.25 12c0 1.57.38 3.05 1.02 4.12l3.24-2.52z"
-                  />
-
-                  <path
-                    fill="#EA4335"
-                    d="M12 6.38c1.43 0 2.71.49 3.72 1.45l2.79-2.79C16.84 3.49 14.63 2.5 12 2.5a9.74 9.74 0 0 0-8.73 5.38l3.24 2.52c.78-2.31 2.94-4.02 5.49-4.02z"
-                  />
+                <svg width="18" height="18" viewBox="0 0 24 24" className="shrink-0" aria-hidden="true">
+                  <path fill="#4285F4" d="M21.35 12.27c0-.71-.06-1.39-.18-2.05H12v3.88h5.23a4.47 4.47 0 0 1-1.94 2.94v2.44h3.14c1.84-1.69 2.92-4.18 2.92-7.21z" />
+                  <path fill="#34A853" d="M12 21.5c2.63 0 4.84-.87 6.45-2.36l-3.14-2.44c-.87.58-1.98.93-3.31.93-2.55 0-4.71-1.72-5.49-4.03H3.27v2.52A9.74 9.74 0 0 0 12 21.5z" />
+                  <path fill="#FBBC05" d="M6.51 13.6A5.85 5.85 0 0 1 6.2 12c0-.56.1-1.1.31-1.6V7.88H3.27A9.75 9.75 0 0 0 2.25 12c0 1.57.38 3.05 1.02 4.12l3.24-2.52z" />
+                  <path fill="#EA4335" d="M12 6.38c1.43 0 2.71.49 3.72 1.45l2.79-2.79C16.84 3.49 14.63 2.5 12 2.5a9.74 9.74 0 0 0-8.73 5.38l3.24 2.52c.78-2.31 2.94-4.02 5.49-4.02z" />
                 </svg>
-
-                <span className="whitespace-nowrap">
-                  Continue with Google
-                </span>
+                <span className="whitespace-nowrap">Continue with Google</span>
               </button>
 
-              {/* APPLE */}
               <button
                 type="button"
                 onClick={handleAppleSignup}
                 disabled={isLoading}
                 className="flex min-w-0 w-full items-center justify-center gap-2.5 whitespace-nowrap rounded-full border border-[#D1D5DB] bg-white px-4 py-3 text-sm font-medium text-[#14181F] transition hover:bg-[#F4F4F2] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  className="shrink-0 text-black"
-                  aria-hidden="true"
-                >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="shrink-0 text-black" aria-hidden="true">
                   <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.79 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.09zM12.03 7.25C11.88 5.02 13.69 3.18 15.75 3c.28 2.58-2.34 4.5-3.72 4.25z" />
                 </svg>
-
-                <span className="whitespace-nowrap">
-                  Continue with Apple
-                </span>
+                <span className="whitespace-nowrap">Continue with Apple</span>
               </button>
             </div>
 
-            {/* SECURITY NOTE */}
+            {/* SECURITY */}
             <div className="mt-6 flex items-center justify-center gap-2 text-xs text-[#9CA3AF]">
-              <ShieldCheck
-                size={15}
-                className="text-[#B8791A]"
-              />
-
-              <span>
-                Your account information is handled securely.
-              </span>
+              <ShieldCheck size={15} className="text-[#B8791A]" />
+              <span>Your account information is handled securely.</span>
             </div>
 
             {/* LOGIN */}
             <p className="voltora-body mt-5 text-center text-sm text-[#6B7280]">
               Already have an account?{" "}
-
-              <Link
-                to="/login"
-                className="font-semibold text-[#0A0E14] hover:text-[#B8791A]"
-              >
+              <Link to="/login" className="font-semibold text-[#0A0E14] hover:text-[#B8791A]">
                 Sign in
               </Link>
             </p>
@@ -933,22 +620,8 @@ export default function Register() {
 
 function PasswordRequirement({ valid, text }) {
   return (
-    <div
-      className={`flex items-center gap-1.5 ${
-        valid
-          ? "text-green-600"
-          : "text-[#9CA3AF]"
-      }`}
-    >
-      <CheckCircle2
-        size={12}
-        className={
-          valid
-            ? "text-green-500"
-            : "text-[#D1D5DB]"
-        }
-      />
-
+    <div className={`flex items-center gap-1.5 ${valid ? "text-green-600" : "text-[#9CA3AF]"}`}>
+      <CheckCircle2 size={12} className={valid ? "text-green-500" : "text-[#D1D5DB]"} />
       <span>{text}</span>
     </div>
   );

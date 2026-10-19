@@ -60,7 +60,6 @@ export default function Header() {
 
   return (
     <header className="voltora-body sticky top-0 z-50 border-b border-[#E5E7EB] bg-white/95 backdrop-blur-md">
-      {/* Fonts, shared with the rest of the Voltora account/checkout flow */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
 
@@ -172,6 +171,12 @@ export default function Header() {
                         {user?.email || ""}
                       </p>
                     </div>
+                    <Link
+                      to="/profile"
+                      className="mt-1 block rounded-lg px-3 py-2.5 text-sm font-medium text-[#6B7280] transition hover:bg-[#FFF6E7] hover:text-[#14181F]"
+                    >
+                      My Profile
+                    </Link>
 
                     {/* My Account */}
                     <Link

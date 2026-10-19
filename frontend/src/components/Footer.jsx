@@ -9,7 +9,6 @@ import { Link } from "react-router-dom";
 export default function Footer() {
   return (
     <footer className="voltora-body bg-[#0A0E14] text-white">
-      {/* Fonts, shared with the rest of the Voltora account/checkout flow */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
         .voltora-heading { font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif; }

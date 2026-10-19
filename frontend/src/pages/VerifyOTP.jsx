@@ -1,3 +1,4 @@
+import api from "../api/axios";
 import React, {
   useEffect,
   useRef,
@@ -24,7 +25,6 @@ export default function VerifyOTP() {
 
   const email = location.state?.email || "";
   const purpose = location.state?.purpose || "signup";
-  const name = location.state?.name || "";
 
   const [otp, setOtp] = useState([
     "",
@@ -49,25 +49,6 @@ export default function VerifyOTP() {
     useState(60);
 
   const inputRefs = useRef([]);
-
-  /*
-   * FRONTEND DEMO OTP
-   *
-   * IMPORTANT:
-   * This is only for frontend testing.
-   *
-   * Later the backend will:
-   * - generate a secure OTP
-   * - store a hashed OTP
-   * - send OTP by email
-   * - expire the OTP
-   * - limit attempts
-   *
-   * Demo OTP:
-   * 123456
-   */
-
-  const DEMO_OTP = "123456";
 
   useEffect(() => {
     inputRefs.current[0]?.focus();
@@ -186,6 +167,13 @@ export default function VerifyOTP() {
 
     const enteredOTP = otp.join("");
 
+    if (!email) {
+      setError(
+        "Email is missing. Please return to signup and try again."
+      );
+      return;
+    }
+
     if (enteredOTP.length !== 6) {
       setError("Please enter the complete 6-digit OTP.");
       return;
@@ -194,56 +182,36 @@ export default function VerifyOTP() {
     setIsVerifying(true);
 
     try {
-      /*
-       * FRONTEND DEMO
-       *
-       * Later:
-       *
-       * POST /api/auth/verify-otp
-       *
-       * {
-       *   email,
-       *   otp,
-       *   purpose
-       * }
-       */
-
-      await new Promise((resolve) =>
-        setTimeout(resolve, 800)
+      const response = await api.post(
+        "/auth/verify-email",
+        {
+          email: email.trim().toLowerCase(),
+          code: enteredOTP,
+        }
       );
 
-      if (enteredOTP !== DEMO_OTP) {
+      if (!response.data.success) {
         setError(
-          "Invalid OTP. Please check the code and try again."
+          response.data.message ||
+            "Invalid verification code."
         );
-
         return;
       }
 
       setSuccessMessage(
-        purpose === "signup"
-          ? "Your account has been verified successfully."
-          : "OTP verified successfully."
+        "Your email has been verified successfully."
       );
 
-      await new Promise((resolve) =>
-        setTimeout(resolve, 700)
-      );
-
-      navigate("/", {
-        replace: true,
-        state: {
-          authenticated: true,
-          email,
-          name,
-          purpose,
-        },
-      });
+      setTimeout(() => {
+        navigate("/login", {
+          replace: true,
+          state: { email },
+        });
+      }, 700);
     } catch (error) {
-      console.error("OTP verification error:", error);
-
       setError(
-        "Unable to verify OTP. Please try again."
+        error.response?.data?.message ||
+          "Unable to verify OTP. Please try again."
       );
     } finally {
       setIsVerifying(false);
@@ -260,16 +228,6 @@ export default function VerifyOTP() {
     setIsResending(true);
 
     try {
-      /*
-       * Later:
-       *
-       * POST /api/auth/resend-otp
-       *
-       * {
-       *   email,
-       *   purpose
-       * }
-       */
 
       await new Promise((resolve) =>
         setTimeout(resolve, 800)
@@ -636,22 +594,8 @@ export default function VerifyOTP() {
               </button>
             </div>
 
-            {/* DEMO NOTE */}
-            <div className="mt-7 rounded-xl border border-[#E5E7EB] bg-white p-4">
-              <p className="voltora-body text-xs leading-5 text-[#6B7280]">
-                <span className="font-semibold text-[#14181F]">
-                  Frontend demo:
-                </span>{" "}
-                Use OTP{" "}
-                <span className="font-semibold text-[#B8791A]">
-                  123456
-                </span>{" "}
-                to test the verification flow.
-              </p>
-            </div>
-
             {/* SECURITY */}
-            <div className="mt-6 flex items-center justify-center gap-2 text-xs text-[#9CA3AF]">
+            <div className="mt-8 flex items-center justify-center gap-2 text-xs text-[#9CA3AF]">
               <ShieldCheck
                 size={15}
                 className="text-[#B8791A]"
