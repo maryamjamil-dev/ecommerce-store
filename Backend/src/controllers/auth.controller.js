@@ -4,6 +4,8 @@ const crypto = require("crypto");
 const User = require("../model/user.model");
 const sendEmail = require("../utils/sendEmail");
 
+const isProduction = process.env.NODE_ENV === "production";
+
 const createToken = (userId) => {
   return jwt.sign(
     { id: userId },
@@ -12,10 +14,12 @@ const createToken = (userId) => {
   );
 };
 
+// Frontend and backend are on different domains in production,
+// so the cookie must be secure + sameSite "none" there.
 const cookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "strict",
+  secure: isProduction,
+  sameSite: isProduction ? "none" : "lax",
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
 
@@ -60,8 +64,7 @@ exports.register = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    const allowAdminFromBody =
-      process.env.NODE_ENV !== "production" && role === "admin";
+    const allowAdminFromBody = !isProduction && role === "admin";
 
     const user = await User.create({
       username: username.trim(),
@@ -199,8 +202,8 @@ exports.getMe = async (req, res) => {
 exports.logout = (req, res) => {
   res.clearCookie("token", {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
   });
 
   return res.status(200).json({
@@ -225,7 +228,6 @@ exports.forgotPassword = async (req, res) => {
       email: email.trim().toLowerCase(),
     });
 
-
     if (user) {
       const resetToken = crypto.randomBytes(32).toString("hex");
 
@@ -233,7 +235,7 @@ exports.forgotPassword = async (req, res) => {
         .createHash("sha256")
         .update(resetToken)
         .digest("hex");
-      user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; 
+      user.resetPasswordExpire = Date.now() + 15 * 60 * 1000;
       await user.save({ validateBeforeSave: false });
 
       const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
