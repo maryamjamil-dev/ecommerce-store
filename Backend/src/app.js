@@ -28,7 +28,7 @@ const app = express();
 app.set("trust proxy", 1);
 
 const clientUrl = (process.env.CLIENT_URL || "").replace(/\/+$/, "");
-const allowedOrigins = ["https://ecommerce-store-frontend-mka8ujoyo.vercel.app/", "https://ecommerce-store-sooty-eight.vercel.app/"];
+const allowedOrigins = ["https://ecommerce-store-frontend-pi.vercel.app", "https://ecommerce-store-sooty-eight.vercel.app"];
 if (clientUrl) allowedOrigins.push(clientUrl);
 
 app.use(
